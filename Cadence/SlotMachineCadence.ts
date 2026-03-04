@@ -36,7 +36,7 @@ type RoundsCadences = {
  * @param defaultCadence It's the cadence value when don't has anticipation.
  */
 const anticipatorConfig: AnticipatorConfig = {
-  columnSize: 5,
+  columnSize: 6,
   minToAnticipate: 2,
   maxToAnticipate: 3,
   anticipateCadence: 2,
@@ -49,9 +49,9 @@ const anticipatorConfig: AnticipatorConfig = {
 const gameRounds: RoundsSymbols = {
   roundOne: {
     specialSymbols: [
+      { column: 3, row: 4 },
       { column: 0, row: 2 },
       { column: 1, row: 3 },
-      { column: 3, row: 4 },
     ],
   },
   roundTwo: {
@@ -62,11 +62,19 @@ const gameRounds: RoundsSymbols = {
   },
   roundThree: {
     specialSymbols: [
-      { column: 4, row: 2 },
       { column: 4, row: 3 },
+      { column: 4, row: 1 },
+      { column: 4, row: 3 },
+      { column: 4, row: 3 },
+      { column: 4, row: 1 },
+      { column: 4, row: 3 },
+      { column: 4, row: 1 },
+      { column: 4, row: 3 },
+      { column: 4, row: 1 },
     ],
   },
 };
+
 
 /**
  * This must be used to get all game rounds cadences.
@@ -81,8 +89,43 @@ const slotMachineCadences: RoundsCadences = { roundOne: [], roundTwo: [], roundT
  * @returns SlotCadence Array of numbers representing the slot machine stop cadence.
  */
 function slotCadence(symbols: Array<SlotCoordinate>): SlotCadence {
+  // sort the symbols by column and remove duplicates
+  symbols.sort((a, b) => {
+    if (a.column !== b.column) {
+      return a.column - b.column;
+    }
+    return a.row - b.row;
+  });
+
+  symbols = symbols.filter((symbol, index, self) => 
+    {
+      if( index === 0 ) return true; 
+
+      let previousSymbol = self[index - 1];
+      return previousSymbol.column !== symbol.column || previousSymbol.row !== symbol.row;
+    }
+  );
+  
+  // calculate the cadences
+  let numberOfSpecialSymbols = 0;
+  let cadence: SlotCadence = [];
+  let accumulatedCadence = 0;
+
+  for (let column = 0; column < anticipatorConfig.columnSize; column++) {
+    cadence.push(accumulatedCadence);
+
+    const specialSymbolInColumn = symbols.filter((symbol) => symbol.column === column).length;
+    numberOfSpecialSymbols += specialSymbolInColumn;
+
+    if(numberOfSpecialSymbols >= anticipatorConfig.minToAnticipate && numberOfSpecialSymbols < anticipatorConfig.maxToAnticipate) {
+      accumulatedCadence += anticipatorConfig.anticipateCadence;
+    } else {
+      accumulatedCadence += anticipatorConfig.defaultCadence;
+    }
+    
+  }
   // Magic
-  return [];
+  return cadence;
 }
 
 /**
